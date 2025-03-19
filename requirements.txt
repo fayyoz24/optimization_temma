@@ -1,0 +1,13 @@
+Django
+django-cors-headers
+django-rest-framework
+djangorestframework
+djangorestframework-simplejwt
+python-decouple
+Pillow
+django-filter
+drf_yasg
+faker
+mysqlclient
+pandas
+psycopg2
