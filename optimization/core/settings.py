@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-uufgyjbr#kjbszlww-p79#&h1*-&=-$m%&4clb%dbw@5yg9w$h
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -37,6 +37,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'corsheaders',
+    'rest_framework',
+    'rest_framework.authtoken',
+    'rest_framework_simplejwt',
+
+    'optimizing'
 ]
 
 MIDDLEWARE = [
@@ -49,7 +56,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'optimization.urls'
+ROOT_URLCONF = 'core.urls'
 
 TEMPLATES = [
     {
@@ -67,7 +74,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'optimization.wsgi.application'
+WSGI_APPLICATION = 'core.wsgi.application'
 
 
 # Database
