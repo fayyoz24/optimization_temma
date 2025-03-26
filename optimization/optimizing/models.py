@@ -51,6 +51,7 @@ class LinkedInMessage(models.Model):
     is_incoming = models.BooleanField(default=True)
     classified_status = models.CharField(max_length=10, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    is_replied = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-last_message_date']

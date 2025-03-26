@@ -458,18 +458,21 @@ class FilterLinkedinProfileByStatusView(APIView):
             
             # Filter messages by status with related profile data
             messages = LinkedInMessage.objects.filter(
-                classified_status=status_code
+                classified_status=status_code, is_replied=False
             ).select_related('profile')
             
             # Prepare data for DataFrame
             data = []
             for message in messages:
+
                 data.append({
                     'LinkedIn Profile ID': message.profile.profile_id,
                     'Profile Name': message.profile.name,
                     # 'Last Message Date': message.last_message_date,
                     'Classified Status': message.classified_status
                 })
+                message.is_replied=True
+                message.save()
             
             # Convert to DataFrame
             df = pd.DataFrame(data)
