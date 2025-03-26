@@ -464,37 +464,28 @@ class FilterLinkedinProfileByStatusView(APIView):
             # Prepare data for DataFrame
             data = []
             for message in messages:
-
                 data.append({
                     'LinkedIn Profile ID': message.profile.profile_id,
                     'Profile Name': message.profile.name,
-                    # 'Last Message Date': message.last_message_date,
                     'Classified Status': message.classified_status
                 })
-                message.is_replied=True
+                message.is_replied = True
                 message.save()
             
             # Convert to DataFrame
             df = pd.DataFrame(data)
             
-            # Create an in-memory Excel file
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                df.to_excel(writer, index=False, sheet_name='LinkedIn Profiles')
-                
-                # Auto-adjust columns width
-                worksheet = writer.sheets['LinkedIn Profiles']
-                for i, col in enumerate(df.columns):
-                    column_len = max(df[col].astype(str).map(len).max(), len(col)) + 2
-                    worksheet.column_dimensions[chr(65 + i)].width = column_len
+            # Create an in-memory CSV file
+            output = io.StringIO()
+            df.to_csv(output, index=False)
             
             # Prepare the response
             output.seek(0)
             response = HttpResponse(
-                output.read(), 
-                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                output.getvalue(), 
+                content_type='text/csv'
             )
-            response['Content-Disposition'] = f'attachment; filename=linkedin_profiles_{status_code}.xlsx'
+            response['Content-Disposition'] = f'attachment; filename=linkedin_profiles_{status_code}.csv'
             return response
         
         except Exception as e:
