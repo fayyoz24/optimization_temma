@@ -400,7 +400,7 @@ class MessageClassificationView(APIView):
             
             # Call OpenAI API
             response = openai.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="GPT-4.1",
                 messages=[
                     {"role": "system", "content": "You are a message classifier for LinkedIn interactions."},
                     {"role": "user", "content": prompt}
