@@ -383,7 +383,7 @@ statuses_json = {
   "4.15": "Late response (i.e. Sorry for the delay, just saw your message—still need help?)"
 }
 
-
+import json
 class MessageClassificationView(APIView):
     def post(self, request, message_id):
         try:
@@ -391,12 +391,18 @@ class MessageClassificationView(APIView):
             message = LinkedInMessage.objects.get(id=message_id)
             
             # Prepare prompt for OpenAI
-            prompt = f"""Classify the message into one of these categories:
-            {statuses_json}
-            
-            Message: {message.message_text}
-            
-            Respond with ONLY the status number, key."""
+            prompt = f"""
+            You are a classifier for LinkedIn messages. Given a message from a candidate, choose the **best matching** category **only** from the list below by returning the **status key** (e.g., "3.2.1").
+
+            Categories:
+            {json.dumps(statuses_json, indent=2)}
+
+            Message to classify:
+            \"\"\"{message.message_text}\"\"\"
+
+            Return ONLY the most appropriate status key (e.g., "3.1.1"). Do not include any explanation.
+            """
+
             
             # Call OpenAI API
             response = openai.chat.completions.create(
