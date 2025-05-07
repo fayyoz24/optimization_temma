@@ -360,27 +360,21 @@ class CandidateSaveView(APIView):
             )
 
 statuses_json = {
-  "0": "Nothing",
-  "1": "Listed as candidate to contact",
-  "2": "Introduction message has been sent",
-  "3.1": "Candidate is not interested",
-  "3.1.1": "Thank-you message sent",
-  "3.2": "Candidate is interested",
-  "3.2.1": "Candidate sends WhatsApp number",
-  "3.2.1.1": "Candidate shares phone number but still asks question",
-  "3.3": "Candidate needs more information",
-  "3.3.1": "More information sent",
+  "3.1": "Candidate is not interested in the mentorship program and asks no further question",
+  "3.2": "Candidate is interested in the mentorship program and asks no further question",
+  "3.2.1": "Candidate sends his or her WhatsApp number but asks no further question",
+  "3.2.1.1": "Candidate shares his or her phone number and also asks some question",
+  "3.3": "Candidate only asks further information but hasn't indicated any interest or not and provided no phone number",
   "3.4": "Candidate needs more information but he/she is already interested",
   "3.5": "Message cannot be classified",
   "3.6": "Candidate asks about payment",
   "3.7": "Candidate asks about Dutch language requirement",
   "3.8": "Candidate asks about Min-OCW involvement",
-  "3.9": "Candidate thinks this is a questionnaire",
-  "3.11": "Candidate accepted the invite but didn't respond to the message",
+  "3.9": "Candidate thinks this is a questionnaire/survey",
   "3.12": "Candidate says they’re available only after a specific date",
-  "3.13": "Candidate confirms they’ve already participated",
-  "3.14": "Privacy concern or hesitation",
-  "4.15": "Late response (i.e. Sorry for the delay, just saw your message—still need help?)"
+  "3.13": "Candidate confirms they’ve already participated in the program",
+  "3.14": "Candidate is concerned about the privacy or hesitates to participate because of that",
+  "4.15": "Candidate indicates that he or she has responded late"
 }
 
 import json
