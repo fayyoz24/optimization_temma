@@ -165,7 +165,23 @@ class LinkedInMessageUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-
+statuses_json = {
+  "3.1": "Candidate is not interested in the mentorship program and asks no further question",
+  "3.2": "Candidate is interested in the mentorship program and asks no further question",
+  "3.2.1": "Candidate sends his or her WhatsApp number but asks no further question",
+  "3.2.1.1": "Candidate shares his or her phone number and also asks some question",
+  "3.3": "Candidate only asks further information but hasn't indicated any interest or not and provided no phone number",
+  "3.4": "Candidate needs more information but he/she is already interested",
+  "3.5": "Message cannot be classified",
+  "3.6": "Candidate asks about payment",
+  "3.7": "Candidate asks about Dutch language requirement",
+  "3.8": "Candidate asks about Min-OCW involvement",
+  "3.9": "Candidate thinks this is a questionnaire/survey",
+  "3.12": "Candidate says they’re available only after a specific date",
+  "3.13": "Candidate confirms they’ve already participated in the program",
+  "3.14": "Candidate is concerned about the privacy or hesitates to participate because of that",
+  "4.15": "Candidate indicates that he or she has responded late"
+}
 class LinkedInMessageUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
@@ -224,32 +240,35 @@ class LinkedInMessageUploadView(APIView):
                 
                 # Classify message using OpenAI (optional)
                 try:
-                    prompt = f"""
-                        Indicate which of the following classes does the message belong to. Just tell me the number:
-                        3.1: he is not interested, 
-                        3.2: he is interested, 
-                        3.2.1: he sends his email address, 
-                        3.3: he needs more information, 
-                        3.4: he is interested while also needs more information, 
-                        3.5: none of the above.
-
-                        Please Response just a status code!!!
-                    """
+                    message = LinkedInMessage.objects.get(id=message_id)
                     
-                    from openai import OpenAI
-                    api_key = "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"
-                    client = OpenAI(api_key=api_key)
+                    # Prepare prompt for OpenAI
+                    prompt = f"""
+                    You are a classifier for LinkedIn messages. Given a message from a candidate, choose the **best matching** category **only** from the list below by returning the **status key** (e.g., "3.2.1").
 
-                    completion = client.chat.completions.create(
-                        model="gpt-4o",
+                    Categories:
+                    {json.dumps(statuses_json, indent=2)}
+
+                    Message to classify:
+                    \"\"\"{message.message_text}\"\"\"
+
+                    Return ONLY the most appropriate status key (e.g., "3.1.1"). Do not include any explanation.
+                    """
+
+                    # Call OpenAI API
+                    response = openai.chat.completions.create(
+                        model="GPT-4.1",
                         messages=[
-                            {"role": "system", "content": "You are a message classification assistant."},
-                            {"role": "user", "content": prompt + "\n\nMessage: " + str(message_text)}
-                        ]
+                            {"role": "system", "content": "You are a message classifier for LinkedIn interactions."},
+                            {"role": "user", "content": prompt}
+                        ],
+                        max_tokens=10
                     )
                     
                     # Extract classification
-                    classification = completion.choices[0].message.content.strip()
+                    classification = response.choices[0].message.content.strip()
+                    
+                    # Extract classification
                     
                     # Update message with classification
                     message.classified_status = classification
@@ -359,23 +378,7 @@ class CandidateSaveView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-statuses_json = {
-  "3.1": "Candidate is not interested in the mentorship program and asks no further question",
-  "3.2": "Candidate is interested in the mentorship program and asks no further question",
-  "3.2.1": "Candidate sends his or her WhatsApp number but asks no further question",
-  "3.2.1.1": "Candidate shares his or her phone number and also asks some question",
-  "3.3": "Candidate only asks further information but hasn't indicated any interest or not and provided no phone number",
-  "3.4": "Candidate needs more information but he/she is already interested",
-  "3.5": "Message cannot be classified",
-  "3.6": "Candidate asks about payment",
-  "3.7": "Candidate asks about Dutch language requirement",
-  "3.8": "Candidate asks about Min-OCW involvement",
-  "3.9": "Candidate thinks this is a questionnaire/survey",
-  "3.12": "Candidate says they’re available only after a specific date",
-  "3.13": "Candidate confirms they’ve already participated in the program",
-  "3.14": "Candidate is concerned about the privacy or hesitates to participate because of that",
-  "4.15": "Candidate indicates that he or she has responded late"
-}
+
 
 import json
 class MessageClassificationView(APIView):
