@@ -179,7 +179,6 @@ class LinkedInMessageUploadView(APIView):
                     ProfileStatus.objects.create(
                         profile=profile,
                         status=status_code,
-                        datetime=datetime.now()
                     )
                     
                     messages_processed.append({
