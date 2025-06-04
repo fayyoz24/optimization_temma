@@ -173,11 +173,11 @@ class LinkedInMessageUploadView(APIView):
                 {"detail": f"LinkedIn profile with ID {profile_id} not found"},
                 status=status.HTTP_404_NOT_FOUND
             )
-        except Exception as e:
-            return Response(
-                {"detail": str(e), "success": False},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # except Exception as e:
+        #     return Response(
+        #         {"detail": str(e), "success": False},
+        #         status=status.HTTP_400_BAD_REQUEST
+        #     )
         
 
 
