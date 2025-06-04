@@ -97,8 +97,6 @@ class LinkedInMessageUploadView(APIView):
                 
                 # Classify message using OpenAI
                 try:
-
-                    # message = LinkedInMessage.objects.get(id=message_id)
             
                     # Prepare prompt for OpenAI
                     prompt = f"""
@@ -127,54 +125,12 @@ class LinkedInMessageUploadView(APIView):
                     # Extract classification
                     classification = response.choices[0].message.content.strip()
                     
-                    # Validate classification
-                    # valid_statuses = ['3.1', '3.2', '3.3', '3.4', '3.5']
-                    # status_code = classification if classification in valid_statuses else '3.5'
                     status_code = classification
                     
                     # Update message and create profile status
                     message.classified_status = status_code
                     message.save()
 
-
-
-                    # Prepare prompt for OpenAI
-                    # prompt = f"""
-                    #     Indicate which of the following classes does the message belong to. Just tell me the number:
-                    #     3.1: he is not interested, 
-                    #     3.2: he is interested, 
-                    #     3.2.1: he sends his email address, 
-                    #     3.3: he needs more information, 
-                    #     3.4: he is interested while also needs more information, 
-                    #     3.5: none of the above.
-
-                    #     Please Response just a status code!!!
-                    # """
-                    
-                    # from openai import OpenAI
-                    # api_key = "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"
-                    # client = OpenAI(api_key=api_key)
-
-                    # completion = client.chat.completions.create(
-                    #     model="gpt-4o",
-                    #     messages=[
-                    #         {"role": "system", "content": "You are a message classification assistant."},
-                    #         {"role": "user", "content": prompt}
-                    #     ]
-                    # )
-                    
-                    # # Extract classification
-                    # classification = completion.choices[0].message.content.strip()
-                    
-                    # # Validate classification
-                    # # valid_statuses = ['0', '3.1', '3.2', '3.3', '3.4', '3.5']
-                    # status_code = classification
-                    # # status_code = classification if classification in valid_statuses else '3.5'
-                    
-                    # # Update message with classification
-                    # message.classified_status = status_code
-                    # message.save()
-                    
                     # Create profile status
                     ProfileStatus.objects.create(
                         profile=profile,
@@ -214,12 +170,12 @@ class LinkedInMessageUploadView(APIView):
         
         except LinkedInProfile.DoesNotExist:
             return Response(
-                {"detail": f"LinkedIn profile with ID {profile_id} not found"}, 
+                {"detail": f"LinkedIn profile with ID {profile_id} not found"},
                 status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
             return Response(
-                {"detail": str(e), "success": False}, 
+                {"detail": str(e), "success": False},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
