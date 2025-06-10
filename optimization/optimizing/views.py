@@ -91,7 +91,6 @@ class LinkedInMessageUploadView(APIView):
                 message = LinkedInMessage.objects.create(
                     profile=profile,
                     message_text=str(message_text),
-                    sent_date=datetime.now(),
                     is_incoming=True  # Default to incoming
                 )
                 
@@ -276,37 +275,37 @@ class LinkedInMessageUploadView(APIView):
                     
                     # Create message entry
                     message = LinkedInMessage.objects.create(
-                        # profile=profile,
+                        profile=profile,
                         message_text=str(message_text),
-                        sent_date=datetime.now(),
                         is_incoming=True
                     )
                     
                     # Classify message using OpenAI
                     try:
+                        client = OpenAI(api_key=api_key)
                         # Prepare prompt for OpenAI
                         prompt = f"""
-You are a classifier for LinkedIn messages about a mentorship program. Given a message from a candidate, choose the **best matching** category **only** from the list below by returning the **status key** (e.g., "3.2.1").
+                                    You are a classifier for LinkedIn messages about a mentorship program. Given a message from a candidate, choose the **best matching** category **only** from the list below by returning the **status key** (e.g., "3.2.1").
 
-Categories:
-{json.dumps(statuses_json, indent=2)}
+                                    Categories:
+                                    {json.dumps(statuses_json, indent=2)}
 
-Message to classify:
-\"\"\"{message.message_text}\"\"\"
+                                    Message to classify:
+                                    \"\"\"{message.message_text}\"\"\"
 
-Instructions:
-- Read the message carefully and understand the candidate's intent
-- Look for key indicators like interest level, questions asked, contact information shared
-- Choose the most specific category that matches
-- If multiple categories could apply, choose the most specific one
-- If none fit well, use "3.5" (Message cannot be classified)
+                                    Instructions:
+                                    - Read the message carefully and understand the candidate's intent
+                                    - Look for key indicators like interest level, questions asked, contact information shared
+                                    - Choose the most specific category that matches
+                                    - If multiple categories could apply, choose the most specific one
+                                    - If none fit well, use "3.5" (Message cannot be classified)
 
-Return ONLY the most appropriate status key (e.g., "3.2.1"). Do not include any explanation.
-"""
-                        
+                                    Return ONLY the most appropriate status key (e.g., "3.2.1"). Do not include any explanation.
+                                    """
+                                                            
                         # Call OpenAI API with proper client
                         response = client.chat.completions.create(
-                            model="gpt-4-turbo",
+                            model="gpt-4o",
                             messages=[
                                 {
                                     "role": "system", 
