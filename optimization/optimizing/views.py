@@ -79,7 +79,7 @@ class LinkedInMessageUploadView(APIView):
             messages_processed = []
             for _, row in messages_df.iterrows():
                 message_text = row['last_message_content']
-                profile_id = row['profile_id']
+                profile_id = row['participants/1/url']
                 profile_id = '123456'  # Temporary profile ID
                 profile, _ = LinkedInProfile.objects.get_or_create(profile_id=profile_id)
                 
@@ -114,7 +114,7 @@ class LinkedInMessageUploadView(APIView):
                     
                     # Call OpenAI API
                     response = openai.chat.completions.create(
-                        model="GPT-4.1",
+                        model="gpt-4-turbo",
                         messages=[
                             {"role": "system", "content": "You are a message classifier for LinkedIn interactions."},
                             {"role": "user", "content": prompt}
@@ -180,7 +180,205 @@ class LinkedInMessageUploadView(APIView):
         #     )
         
 
+import os
+import json
+import pandas as pd
+from datetime import datetime
+from django.conf import settings
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.parsers import MultiPartParser, FormParser
+from openai import OpenAI
 
+class LinkedInMessageUploadView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request):
+        try:
+            # Get OpenAI API key from environment variables or settings
+            api_key = "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"
+            
+            if not api_key:
+                return Response(
+                    {"detail": "OpenAI API key not configured"}, 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            # Initialize OpenAI client
+            client = OpenAI(api_key=api_key)
+
+            # Check if file was uploaded
+            if 'file' not in request.FILES:
+                return Response(
+                    {"detail": "Messages Excel file is required"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            # participants/0/url
+            file = request.FILES['file']
+            
+            # Read Excel file
+            try:
+                messages_df = pd.read_excel(file)
+            except Exception as e:
+                return Response(
+                    {"detail": f"Error reading Excel file: {str(e)}"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Validate required columns
+            required_columns = ['last_message_content', 'participants/1/url']
+            missing_columns = [col for col in required_columns if col not in messages_df.columns]
+            
+            if missing_columns:
+                return Response(
+                    {"detail": f"Excel file must contain columns: {', '.join(missing_columns)}"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Define statuses for LinkedIn message classification
+            statuses_json = {
+                "3.1": "Candidate is not interested in the mentorship program and asks no further question",
+                "3.2": "Candidate is interested in the mentorship program and asks no further question",
+                "3.2.1": "Candidate sends his or her WhatsApp number but asks no further question",
+                "3.2.1.1": "Candidate shares his or her phone number and also asks some question",
+                "3.3": "Candidate only asks further information but hasn't indicated any interest or not and provided no phone number",
+                "3.4": "Candidate needs more information but he/she is already interested",
+                "3.5": "Message cannot be classified",
+                "3.6": "Candidate asks about payment",
+                "3.7": "Candidate asks about Dutch language requirement",
+                "3.8": "Candidate asks about Min-OCW involvement",
+                "3.9": "Candidate thinks this is a questionnaire/survey",
+                "3.12": "Candidate says they're available only after a specific date",
+                "3.13": "Candidate confirms they've already participated in the program",
+                "3.14": "Candidate is concerned about the privacy or hesitates to participate because of that",
+                "4.15": "Candidate indicates that he or she has responded late"
+            }
+            
+            # Process messages
+            messages_processed = []
+            errors = []
+            
+            for index, row in messages_df.iterrows():
+                try:
+                    message_text = row['last_message_content']
+                    profile_id = str(row['participants/1/url']) if not pd.isna(row['participants/1/url']) else '123456'
+                    
+                    # Skip empty messages
+                    if pd.isna(message_text) or str(message_text).strip() == '':
+                        continue
+                    
+                    # Get or create profile
+                    profile, created = LinkedInProfile.objects.get_or_create(
+                        profile_id=profile_id,
+                        defaults={'name': f'Profile_{profile_id}'}  # Add default name
+                    )
+                    
+                    # Create message entry
+                    message = LinkedInMessage.objects.create(
+                        # profile=profile,
+                        message_text=str(message_text),
+                        sent_date=datetime.now(),
+                        is_incoming=True
+                    )
+                    
+                    # Classify message using OpenAI
+                    try:
+                        # Prepare prompt for OpenAI
+                        prompt = f"""
+You are a classifier for LinkedIn messages about a mentorship program. Given a message from a candidate, choose the **best matching** category **only** from the list below by returning the **status key** (e.g., "3.2.1").
+
+Categories:
+{json.dumps(statuses_json, indent=2)}
+
+Message to classify:
+\"\"\"{message.message_text}\"\"\"
+
+Instructions:
+- Read the message carefully and understand the candidate's intent
+- Look for key indicators like interest level, questions asked, contact information shared
+- Choose the most specific category that matches
+- If multiple categories could apply, choose the most specific one
+- If none fit well, use "3.5" (Message cannot be classified)
+
+Return ONLY the most appropriate status key (e.g., "3.2.1"). Do not include any explanation.
+"""
+                        
+                        # Call OpenAI API with proper client
+                        response = client.chat.completions.create(
+                            model="gpt-4-turbo",
+                            messages=[
+                                {
+                                    "role": "system", 
+                                    "content": "You are a message classifier for LinkedIn interactions."
+                                },
+                                {"role": "user", "content": prompt}
+                            ],
+                            max_tokens=10,
+                            temperature=0  # For consistent classification
+                        )
+                        
+                        # Extract classification
+                        classification = response.choices[0].message.content.strip().strip('"')
+                        
+                        # Validate classification is in our statuses
+                        if classification not in statuses_json:
+                            classification = '3.5'  # Default to unclassified
+                        
+                        status_code = classification
+                        
+                    except Exception as classification_error:
+                        # If classification fails, mark as unclassified
+                        status_code = '3.5'
+                        errors.append({
+                            'row': index + 1,
+                            'error': f'Classification failed: {str(classification_error)}'
+                        })
+                    
+                    # Update message
+                    message.classified_status = status_code
+                    message.save()
+
+                    # Create profile status
+                    ProfileStatus.objects.create(
+                        profile=profile,
+                        status=status_code,
+                        datetime=datetime.now()
+                    )
+                    
+                    messages_processed.append({
+                        'message_id': message.id,
+                        'profile_id': profile_id,
+                        'message_text': message.message_text[:100] + '...' if len(message.message_text) > 100 else message.message_text,
+                        'classified_status': status_code,
+                        'status_description': statuses_json.get(status_code, 'Unknown')
+                    })
+                    
+                except Exception as row_error:
+                    errors.append({
+                        'row': index + 1,
+                        'error': str(row_error)
+                    })
+                    continue
+            
+            response_data = {
+                "success": True,
+                "messages_processed": messages_processed,
+                "total_messages": len(messages_processed),
+                "total_rows_in_file": len(messages_df)
+            }
+            
+            if errors:
+                response_data["errors"] = errors
+                response_data["error_count"] = len(errors)
+            
+            return Response(response_data)
+        
+        except Exception as e:
+            return Response(
+                {"detail": f"Unexpected error: {str(e)}", "success": False},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class CandidateSaveView(APIView):
     def post(self, request):
